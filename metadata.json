@@ -1,0 +1,6 @@
+{
+  "name": "Sigma Diagnostic and USG Center",
+  "description": "Offline-ready Desktop PWA for USG and X-Ray diagnostic center management with split-payment patient billing, auto-detecting POS/A4 receipt printing, WhatsApp summaries, role-based access control, End-of-Day transaction summaries, and portable folder sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
