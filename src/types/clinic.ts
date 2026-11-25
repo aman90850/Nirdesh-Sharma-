@@ -122,6 +122,20 @@ export interface ClinicSettings {
   defaultPrinterMode: PrinterMode;
   lastSyncedAt: string | null;
   linkedFolderName: string | null;
+  /** When the last full backup was saved (folder or download). */
+  lastBackupAt?: string | null;
+  /** Clinic UPI ID (e.g. sigma@okicici) used for pay-by-QR. */
+  upiId?: string;
+  updatedAt: string;
+}
+
+export interface ActivityEntry {
+  id: string;
+  at: string; // ISO time
+  userName: string;
+  role: Role;
+  action: string; // e.g. 'Bill created'
+  detail: string;
   updatedAt: string;
 }
 
@@ -135,6 +149,7 @@ export interface ClinicDatabase {
   expenses: ExpenseEntry[];
   employees: EmployeeAccount[];
   settings: ClinicSettings;
+  activityLog?: ActivityEntry[];
 }
 
 export type NavRoute =
@@ -155,7 +170,8 @@ export type NavRoute =
   | 'report-progress'
   | 'employee-view'
   | 'employee-account'
-  | 'settings';
+  | 'settings'
+  | 'activity-log';
 
 export type PrintDocument =
   | { kind: 'receipt'; patient: PatientBill }

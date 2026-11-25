@@ -129,7 +129,7 @@ export const FolderSyncModal: React.FC<FolderSyncModalProps> = ({
                 type="button"
                 disabled={syncBusy || !fsSupported}
                 onClick={onConnectFolder}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer disabled:opacity-50"
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 <span>{folderConnected ? 'Change Sync Folder' : 'Connect Local Folder'}</span>
@@ -177,7 +177,7 @@ export const FolderSyncModal: React.FC<FolderSyncModalProps> = ({
                 onClick={onExportBundle}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#2B4C8C]" />
+                <Download className="w-3.5 h-3.5 text-[#1E2B4D]" />
                 <span>Export Sync File (.json)</span>
               </button>
 

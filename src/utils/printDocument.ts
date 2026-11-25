@@ -1,4 +1,5 @@
 import type { ClinicDatabase, PatientBill, PrinterMode } from '../types/clinic';
+import { buildUpiLink, qrSvg } from './upi';
 import {
   amountInWords,
   computeEodSummary,
@@ -15,6 +16,9 @@ function escapeHtml(value: string | number | null | undefined): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+export const POWERED_BY_TEXT = 'Powered by Aman Sharma';
+const POWERED_BY_HTML = `<div style="margin-top:8px;text-align:center;font-size:9.5px;color:#94A3B8;letter-spacing:0.02em;">${POWERED_BY_TEXT}</div>`;
 
 const SIGMA_LOGO_SVG = `
 <svg width="48" height="48" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -272,6 +276,15 @@ export function printPatientReceipt(
   db: ClinicDatabase,
   mode: PrinterMode
 ): void {
+  // Pay-balance QR, only when money is still due and a UPI ID is set
+  const balanceQrHtml = (px: number): string => {
+    const link = buildUpiLink(db.settings, patient.balance, `${patient.usgNo} balance`);
+    if (!link || patient.balance <= 0) return '';
+    return `<div style="display:flex;align-items:center;gap:10px;margin:10px 0;">
+      ${qrSvg(link, px)}
+      <div style="font-size:11px;line-height:1.4;color:#111;"><strong>Scan to pay balance ${escapeHtml(formatCurrency(patient.balance))}</strong><br/>UPI: ${escapeHtml(db.settings.upiId || '')}</div>
+    </div>`;
+  };
   const { settings } = db;
   const docName = db.doctors.find((d) => d.id === patient.doctorId)?.name || 'SELF';
   const ashaName = db.ashas.find((a) => a.id === patient.ashaId)?.name || '';
@@ -355,6 +368,7 @@ export function printPatientReceipt(
       <div class="pos-row bold"><span>Balance Due:</span><span class="mono">${escapeHtml(formatCurrency(patient.balance))}</span></div>
     </div>
 
+    ${balanceQrHtml(140)}
     <div class="pos-footer">
       <div>Thank you for visiting ${escapeHtml(settings.centerName)}</div>
       <div>Please bring this receipt for report collection.</div>
@@ -425,6 +439,7 @@ export function printPatientReceipt(
       <div>
         <div>Prepared By: <strong>${escapeHtml(patient.createdBy)}</strong></div>
         <div style="margin-top:2px;">Please bring this receipt at the time of report delivery.</div>
+        ${balanceQrHtml(110)}
       </div>
       <div class="right">
         <div style="height:28px;"></div>
@@ -434,6 +449,7 @@ export function printPatientReceipt(
       </div>
     </div>
   </div>
+  ${POWERED_BY_HTML}
 </body>
 </html>`;
 
@@ -602,6 +618,7 @@ export function printEodSummaryDocument(
       <div class="bold" style="color:#0F172A;">Verified Signatory</div>
     </div>
   </div>
+  ${POWERED_BY_HTML}
 </body>
 </html>`;
 
@@ -672,6 +689,7 @@ export function printPatientTestReport(patient: PatientBill, db: ClinicDatabase)
       </div>
     </div>
   </div>
+  ${POWERED_BY_HTML}
 </body>
 </html>`;
 

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Lock, Pencil, Plus, Search, ShieldCheck, Trash2, X } from 'lucide-react';
+import { MIN_PASSWORD_LENGTH } from '../services/auth';
+import { roleLabel } from '../utils/roles';
 import type { EmployeeAccount, Role } from '../types/clinic';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -30,7 +32,6 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Operator');
-  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [deleteTarget, setDeleteTarget] = useState<EmployeeAccount | null>(null);
   const [error, setError] = useState('');
 
@@ -64,7 +65,7 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
     setEmpNo(emp.empNo);
     setContactNo(emp.contactNo);
     setEmailOrUsername(emp.emailOrUsername);
-    setPassword(emp.password);
+    setPassword(''); // never load the stored password into the form
     setRole(emp.role);
     setError('');
     setShowForm(true);
@@ -73,8 +74,27 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!name.trim() || !empNo.trim() || !emailOrUsername.trim() || !password.trim()) {
-      setError('Name, Emp No, Username/Email, and Password are required.');
+    if (!name.trim() || !empNo.trim() || !emailOrUsername.trim()) {
+      setError('Name, Emp No and Username/Email are required.');
+      return;
+    }
+    if (!editingId && !password) {
+      setError('Password is required for a new account.');
+      return;
+    }
+    if (password && password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+    const uname = emailOrUsername.trim().toLowerCase();
+    const no = empNo.trim().toLowerCase();
+    const clash = employees.find(
+      (e) =>
+        e.id !== editingId &&
+        (e.emailOrUsername.toLowerCase() === uname || e.empNo.toLowerCase() === no)
+    );
+    if (clash) {
+      setError('Another staff account already uses this Username or Emp No.');
       return;
     }
 
@@ -85,7 +105,7 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
         empNo: empNo.trim(),
         contactNo: contactNo.trim(),
         emailOrUsername: emailOrUsername.trim(),
-        password: password.trim(),
+        password, // plain here; hashed by the app before it is saved
         role,
         updatedAt: new Date().toISOString(),
       },
@@ -108,11 +128,11 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">
-            {subView === 'emp' ? 'Employee List' : 'Staff Accounts & Role Access'}
+          <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">
+            {subView === 'emp' ? 'Staff' : 'Staff logins'}
           </h1>
-          <p className="text-xs text-slate-500">
-            Manage receptionists and Admin accounts. Operators have restricted access to protect cash and DC commissions.
+          <p className="mt-1 text-[15px] text-slate-600">
+            Manage receptionists and Admin accounts. Users can work on every page except summaries and reports.
           </p>
         </div>
 
@@ -143,7 +163,7 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
               resetForm();
               setShowForm(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Staff</span>
@@ -208,13 +228,17 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Password *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {editingId ? 'New Password' : 'Password *'}
+              </label>
               <input
-                type="text"
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder={editingId ? 'Leave blank to keep current' : `Min ${MIN_PASSWORD_LENGTH} characters`}
+                autoComplete="new-password"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"
-                required
+                required={!editingId}
               />
             </div>
             <div>
@@ -224,7 +248,7 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
                 onChange={(e) => setRole(e.target.value as Role)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
               >
-                <option value="Operator">Operator (Billing &amp; Today EOD only)</option>
+                <option value="Operator">User (all pages except summaries)</option>
                 <option value="Admin">Admin (Full Access &amp; Commissions)</option>
               </select>
             </div>
@@ -242,7 +266,7 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+              className="rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
             >
               {editingId ? 'Update Account' : 'Save Account'}
             </button>
@@ -296,30 +320,17 @@ export const EmployeeModule: React.FC<EmployeeModuleProps> = ({
                   ) : (
                     <>
                       <td className="py-2.5 px-4 font-mono text-slate-700">{emp.emailOrUsername}</td>
-                      <td className="py-2.5 px-4 font-mono text-slate-700">
-                        <div className="inline-flex items-center gap-2">
-                          <span>{visiblePasswords[emp.id] ? emp.password : '••••••••'}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setVisiblePasswords((prev) => ({ ...prev, [emp.id]: !prev[emp.id] }))
-                            }
-                            className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                            aria-label="Toggle password visibility"
-                          >
-                            {visiblePasswords[emp.id] ? (
-                              <EyeOff className="w-3.5 h-3.5" />
-                            ) : (
-                              <Eye className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
+                      <td className="py-2.5 px-4 text-slate-500">
+                        <span className="inline-flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Encrypted</span>
+                        </span>
                       </td>
                     </>
                   )}
                   <td className="py-2.5 px-4 font-semibold">
-                    <span className={emp.role === 'Admin' ? 'text-[#2B4C8C]' : 'text-slate-600'}>
-                      {emp.role}
+                    <span className={emp.role === 'Admin' ? 'text-[#1E2B4D]' : 'text-slate-600'}>
+                      {roleLabel(emp.role)}
                     </span>
                   </td>
                   <td className="py-2.5 px-4 text-right whitespace-nowrap">

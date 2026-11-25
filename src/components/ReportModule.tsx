@@ -107,11 +107,11 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
       <div className="space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900">
-              End-of-Day Transaction Summary
+            <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">
+              End-of-day summary
             </h1>
-            <p className="text-xs text-slate-500">
-              Complete business day cash reconciliation, split-payment totals, expenses, and itemized transaction log.
+            <p className="mt-1 text-[15px] text-slate-600">
+              The day's money in and out, and every payment taken.
             </p>
           </div>
 
@@ -127,7 +127,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
             <button
               type="button"
               onClick={() => onPrintEod(eodDate)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#142036] whitespace-nowrap cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print EOD Summary</span>
@@ -155,7 +155,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <div className="text-xs font-semibold text-slate-500">Total Collection ({formatDisplayDate(eodDate)})</div>
-            <div className="mt-2 font-mono text-2xl font-bold text-[#2B4C8C] tabular-nums">
+            <div className="mt-2 font-mono text-2xl font-bold text-[#1E2B4D] tabular-nums">
               {formatCurrency(eod.totalCollected)}
             </div>
             <div className="mt-1 text-xs text-slate-500">
@@ -267,7 +267,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
               </div>
               <div className="py-2 flex justify-between">
                 <dt className="text-slate-600">Prior-Day Dues Collected Today</dt>
-                <dd className="font-mono font-semibold text-[#2B4C8C] tabular-nums">
+                <dd className="font-mono font-semibold text-[#1E2B4D] tabular-nums">
                   {formatCurrency(eod.oldDuesCollectedToday)}
                 </dd>
               </div>
@@ -323,7 +323,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
                 ) : (
                   eod.paymentEntriesToday.map((entry) => (
                     <tr key={entry.paymentId} className="hover:bg-slate-50/80">
-                      <td className="py-2.5 px-4 font-mono font-bold text-[#2B4C8C]">{entry.usgNo}</td>
+                      <td className="py-2.5 px-4 font-mono font-bold text-[#1E2B4D]">{entry.usgNo}</td>
                       <td className="py-2.5 px-4 font-medium text-slate-900">
                         {entry.patientName}
                         {entry.isOldDueCollection && (
@@ -355,7 +355,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
             <button
               type="button"
               onClick={() => onSwitchSubView('expense-add')}
-              className="text-xs font-semibold text-[#2B4C8C] hover:underline cursor-pointer"
+              className="text-xs font-semibold text-[#1E2B4D] hover:underline cursor-pointer"
             >
               + Add Expense / Credit
             </button>
@@ -439,9 +439,9 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900">Add Expense / Cash Ledger</h1>
-            <p className="text-xs text-slate-500">
-              Record clinic Debit (DR) expenses or Credit (CR) cash additions—automatically reconciled in End-of-Day Summary.
+            <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Add expense</h1>
+            <p className="mt-1 text-[15px] text-slate-600">
+              Record money paid out (DR) or cash added to the drawer (CR). It shows up in the end-of-day summary.
             </p>
           </div>
           <button
@@ -524,7 +524,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
           <div className="flex justify-end pt-2 border-t border-slate-100">
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-5 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-5 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Save Record</span>
@@ -549,15 +549,15 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900">View Expense Ledger</h1>
-            <p className="text-xs text-slate-500">
-              Filter clinic Credit (CR) and Debit (DR) transactions by date range.
+            <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Expenses</h1>
+            <p className="mt-1 text-[15px] text-slate-600">
+              Money paid out and cash added, by date.
             </p>
           </div>
           <button
             type="button"
             onClick={() => onSwitchSubView('expense-add')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Expense</span>
@@ -586,6 +586,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
             </div>
           </div>
 
+          {isAdmin && (
           <div className="flex items-center gap-5 text-xs">
             <span>
               Total CR: <strong className="font-mono text-emerald-700">{formatCurrency(sumCR)}</strong>
@@ -594,6 +595,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
               Total DR: <strong className="font-mono text-red-600">{formatCurrency(sumDR)}</strong>
             </span>
           </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -701,9 +703,9 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">Doctor&apos;s Referral Report</h1>
-          <p className="text-xs text-slate-500">
-            Inspect patient volume and billing totals referred by individual doctors.
+          <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Doctor referrals</h1>
+          <p className="mt-1 text-[15px] text-slate-600">
+            Patients and billing referred by each doctor.
           </p>
         </div>
 
@@ -800,7 +802,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
                   bills.map((b) => (
                     <tr key={b.id}>
                       <td className="py-2.5 px-4 font-mono">{formatDisplayDate(b.date)}</td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-[#2B4C8C]">{b.usgNo}</td>
+                      <td className="py-2.5 px-4 font-mono font-bold text-[#1E2B4D]">{b.usgNo}</td>
                       <td className="py-2.5 px-4 font-semibold text-slate-900">{b.title} {b.name}</td>
                       <td className="py-2.5 px-4">{doctorMap.get(b.doctorId) || 'SELF'}</td>
                       <td className="py-2.5 px-4 text-slate-600">{b.items.map((i) => i.title).join(', ')}</td>
@@ -832,11 +834,11 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">
-            Dr. &amp; Asha DC Commission Report
+          <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">
+            DC commission
           </h1>
-          <p className="text-xs text-slate-500">
-            Automatically calculates S.T % and R.T % referral commissions per test line item (Admin only).
+          <p className="mt-1 text-[15px] text-slate-600">
+            Commission owed to each doctor and Asha worker, from their S.T and R.T rates.
           </p>
         </div>
 
@@ -865,7 +867,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
               onClick={() => setDcMode('doctor')}
               className={`rounded-lg px-4 py-2 text-xs font-semibold cursor-pointer ${
                 dcMode === 'doctor'
-                  ? 'bg-[#2B4C8C] text-white'
+                  ? 'bg-[#1E2B4D] text-white'
                   : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
@@ -876,7 +878,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
               onClick={() => setDcMode('asha')}
               className={`rounded-lg px-4 py-2 text-xs font-semibold cursor-pointer ${
                 dcMode === 'asha'
-                  ? 'bg-[#2B4C8C] text-white'
+                  ? 'bg-[#1E2B4D] text-white'
                   : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
@@ -931,7 +933,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
             </span>
             <div className="flex gap-4">
               <span>Test Volume: <strong className="font-mono">{formatCurrency(totalBilled)}</strong></span>
-              <span>Total DC Payable: <strong className="font-mono text-[#2B4C8C]">{formatCurrency(totalCommission)}</strong></span>
+              <span>Total DC Payable: <strong className="font-mono text-[#1E2B4D]">{formatCurrency(totalCommission)}</strong></span>
             </div>
           </div>
 
@@ -975,7 +977,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
                       <td className="py-2.5 px-4 text-right font-mono tabular-nums text-slate-700">
                         {r.rtPercent}% → <strong>{formatCurrency(r.rtCommission)}</strong>
                       </td>
-                      <td className="py-2.5 px-4 text-right font-mono font-bold text-[#2B4C8C] tabular-nums">
+                      <td className="py-2.5 px-4 text-right font-mono font-bold text-[#1E2B4D] tabular-nums">
                         {formatCurrency(r.totalCommission)}
                       </td>
                     </tr>
@@ -1019,9 +1021,9 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-xl font-bold text-slate-900">Center &amp; Test Progress Report</h1>
-        <p className="text-xs text-slate-500">
-          Analyze scan volume and revenue by center across Ultrasound and X-Ray categories.
+        <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Progress by center</h1>
+        <p className="mt-1 text-[15px] text-slate-600">
+          Scans and revenue for each center, USG and X-ray.
         </p>
       </div>
 
@@ -1064,7 +1066,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
           onClick={() => setProgressTab('summary')}
           className={`rounded-lg px-4 py-2 text-xs font-semibold cursor-pointer ${
             progressTab === 'summary'
-              ? 'bg-[#2B4C8C] text-white'
+              ? 'bg-[#1E2B4D] text-white'
               : 'border border-slate-200 bg-white text-slate-700'
           }`}
         >
@@ -1075,7 +1077,7 @@ export const ReportModule: React.FC<ReportModuleProps> = ({
           onClick={() => setProgressTab('usg')}
           className={`rounded-lg px-4 py-2 text-xs font-semibold cursor-pointer ${
             progressTab === 'usg'
-              ? 'bg-[#2B4C8C] text-white'
+              ? 'bg-[#1E2B4D] text-white'
               : 'border border-slate-200 bg-white text-slate-700'
           }`}
         >

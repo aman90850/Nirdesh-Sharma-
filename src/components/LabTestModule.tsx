@@ -89,9 +89,9 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-xl font-bold text-slate-900">USG &amp; X-Ray Master</h1>
-        <p className="text-xs text-slate-500">
-          Manage all Ultrasound and X-Ray tests, pricing, and S.T / R.T commission categories ({labTests.length} total entries).
+        <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Test master</h1>
+        <p className="mt-1 text-[15px] text-slate-600">
+          Every USG and X-ray test with its rate and S.T / R.T category ({labTests.length} tests).
         </p>
       </div>
 
@@ -123,7 +123,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. USG WHOLE ABDOMEN"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
               required
             />
           </div>
@@ -138,7 +138,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="900"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
               required
             />
           </div>
@@ -148,7 +148,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
             <select
               value={parent}
               onChange={(e) => setParent(e.target.value as TestParent)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
             >
               <option value="Ultrasound">Ultrasound</option>
               <option value="X-Ray">X-Ray</option>
@@ -160,7 +160,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
             <select
               value={type}
               onChange={(e) => setType(e.target.value as TestType)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
             >
               <option value="S.T">S.T</option>
               <option value="R.T">R.T</option>
@@ -170,7 +170,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
           <div className="lg:col-span-2">
             <button
               type="submit"
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] transition-colors whitespace-nowrap cursor-pointer h-[38px]"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] transition-colors whitespace-nowrap cursor-pointer h-[38px]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{editingId ? 'Update' : 'Add Record'}</span>
@@ -237,7 +237,7 @@ export const LabTestModule: React.FC<LabTestModuleProps> = ({
                   setPage(1);
                 }}
                 placeholder="Search test title..."
-                className="w-56 rounded-lg border border-slate-300 pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+                className="w-56 rounded-lg border border-slate-300 pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
               />
             </div>
 

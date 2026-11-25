@@ -110,10 +110,10 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="font-display text-xl font-bold text-slate-900">
+            <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">
               {editingId ? `Edit ${label}` : `Add ${label}`}
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="mt-1 text-[15px] text-slate-600">
               Configure referral details and USG commission rates for S.T and R.T tests.
             </p>
           </div>
@@ -140,7 +140,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={`Enter ${label.toLowerCase()} name...`}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none focus:ring-2 focus:ring-[#2B4C8C]/15"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none focus:ring-2 focus:ring-[#1E2B4D]/15"
                 required
               />
             </div>
@@ -152,7 +152,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="10-digit mobile number"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-slate-900 focus:border-[#2B4C8C] focus:outline-none focus:ring-2 focus:ring-[#2B4C8C]/15"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-slate-900 focus:border-[#1E2B4D] focus:outline-none focus:ring-2 focus:ring-[#1E2B4D]/15"
               />
             </div>
 
@@ -165,7 +165,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 step="0.5"
                 value={stPercent}
                 onChange={(e) => setStPercent(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#2B4C8C] focus:outline-none focus:ring-2 focus:ring-[#2B4C8C]/15"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#1E2B4D] focus:outline-none focus:ring-2 focus:ring-[#1E2B4D]/15"
               />
             </div>
 
@@ -178,7 +178,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 step="0.5"
                 value={rtPercent}
                 onChange={(e) => setRtPercent(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#2B4C8C] focus:outline-none focus:ring-2 focus:ring-[#2B4C8C]/15"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono tabular-nums text-slate-900 focus:border-[#1E2B4D] focus:outline-none focus:ring-2 focus:ring-[#1E2B4D]/15"
               />
             </div>
 
@@ -189,7 +189,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Clinic, PHC, or hospital address"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none focus:ring-2 focus:ring-[#2B4C8C]/15"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none focus:ring-2 focus:ring-[#1E2B4D]/15"
               />
             </div>
           </div>
@@ -216,7 +216,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
             )}
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-5 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-5 py-2 text-xs font-semibold text-white hover:bg-[#142036] transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{editingId ? `Update ${label}` : isDoctor ? 'Add Doctor' : 'Save Asha'}</span>
@@ -231,10 +231,10 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">
-            {isDoctor ? 'Doctors List' : 'Asha / Referral Workers List'}
+          <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">
+            {isDoctor ? 'Doctors' : 'Asha workers'}
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="mt-1 text-[15px] text-slate-600">
             {items.length} registered {isDoctor ? 'doctors' : 'Asha workers'} with S.T and R.T commission slabs.
           </p>
         </div>
@@ -244,7 +244,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
             resetForm();
             onSwitchMode('add');
           }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Add {label}</span>
@@ -260,7 +260,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
           <select
             value={selectedFilterId}
             onChange={(e) => setSelectedFilterId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
           >
             <option value="">All {isDoctor ? 'Doctors' : 'Asha Workers'}</option>
             {items.map((item) => (
@@ -279,7 +279,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder={`Search by name, phone, or address...`}
-              className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 focus:border-[#2B4C8C] focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 focus:border-[#1E2B4D] focus:outline-none"
             />
           </div>
         </div>
@@ -297,7 +297,7 @@ export const DoctorAshaModule: React.FC<DoctorAshaModuleProps> = ({
                 setSearchText('');
                 if (items.length === 0) onSwitchMode('add');
               }}
-              className="mt-3 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+              className="mt-3 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
             >
               {items.length === 0 ? `Add First ${label}` : 'Clear Filters'}
             </button>

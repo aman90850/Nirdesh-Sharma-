@@ -130,6 +130,27 @@ export function buildWhatsAppBillLink(
   return targetPhone ? `https://wa.me/${targetPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
 }
 
+export function buildWhatsAppReportReadyLink(
+  patient: PatientBill,
+  testTitles: string[],
+  settings: ClinicSettings
+): string | null {
+  const digits = (patient.phone || '').replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  const target = digits.length === 10 ? `91${digits}` : digits;
+  const lines = [
+    `Namaste ${patient.title} ${patient.name},`,
+    ``,
+    `Your report is ready at *${settings.centerName}*:`,
+    ...testTitles.map((t) => `- ${t}`),
+    ``,
+    `Please collect it with receipt no. *${patient.usgNo}*.`,
+    patient.balance > 0 ? `Balance to pay: ${formatCurrency(patient.balance)}` : '',
+    settings.phone ? `For any query call ${settings.phone}.` : '',
+  ].filter((l, i, arr) => l !== '' || (i > 0 && arr[i - 1] !== ''));
+  return `https://wa.me/${target}?text=${encodeURIComponent(lines.join('\n'))}`;
+}
+
 export interface CommissionRow {
   entityId: string;
   entityName: string;

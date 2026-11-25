@@ -1,3 +1,4 @@
+import { isValidUpiId } from '../utils/upi';
 import React, { useState } from 'react';
 import { FolderSync, Lock, Save } from 'lucide-react';
 import type { ClinicSettings, PrinterMode, Role } from '../types/clinic';
@@ -19,6 +20,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [tagline, setTagline] = useState(settings.tagline);
   const [address, setAddress] = useState(settings.address);
   const [phone, setPhone] = useState(settings.phone);
+  const [upiId, setUpiId] = useState(settings.upiId || '');
   const [regPrefix, setRegPrefix] = useState(settings.regPrefix);
   const [nextRegNumber, setNextRegNumber] = useState(String(settings.nextRegNumber));
   const [defaultPrinterMode, setDefaultPrinterMode] = useState<PrinterMode>(
@@ -51,6 +53,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       tagline: tagline.trim(),
       address: address.trim(),
       phone: phone.trim(),
+      upiId: upiId.trim(),
       regPrefix: regPrefix.trim().toUpperCase() || 'SIG',
       nextRegNumber: Math.max(1, Number(nextRegNumber) || settings.nextRegNumber),
       defaultPrinterMode,
@@ -63,9 +66,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div className="space-y-5 max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-slate-900">Clinic Settings &amp; Printer Defaults</h1>
-          <p className="text-xs text-slate-500">
-            Configure receipt letterhead details, registration numbering, and default adaptive print behavior.
+          <h1 className="font-display text-[1.75rem] font-bold text-[#1E2B4D]">Clinic settings</h1>
+          <p className="mt-1 text-[15px] text-slate-600">
+            Name and address on receipts, bill numbering, printer and UPI.
           </p>
         </div>
         <button
@@ -73,7 +76,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           onClick={onOpenFolderSync}
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
         >
-          <FolderSync className="w-3.5 h-3.5 text-[#2B4C8C]" />
+          <FolderSync className="w-3.5 h-3.5 text-[#1E2B4D]" />
           <span>Folder Sync Manager</span>
         </button>
       </div>
@@ -119,6 +122,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"
             />
+          </div>
+
+          <div>
+            <label htmlFor="upi-id" className="block text-xs font-semibold text-slate-700 mb-1">Clinic UPI ID (for pay-by-QR)</label>
+            <input
+              id="upi-id"
+              type="text"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="e.g. sigmadiagnostic@okicici"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <p className={`mt-1 text-xs ${upiId && !isValidUpiId(upiId) ? 'text-red-600' : 'text-slate-500'}`}>
+              {upiId && !isValidUpiId(upiId)
+                ? 'This does not look like a UPI ID. It should look like name@bank.'
+                : 'When set, the bill screen shows a QR for UPI payments, and receipts with a balance show a QR to pay it.'}
+            </p>
           </div>
 
           <div>
@@ -171,7 +191,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button
             type="submit"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-5 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-5 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
             <span>Save Settings</span>

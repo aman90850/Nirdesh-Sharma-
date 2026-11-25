@@ -1,4 +1,5 @@
 import { createSeedDatabase } from '../data/seedData';
+import { ensureDefaultUserAccount, secureEmployeeAccounts } from './auth';
 import type { ClinicDatabase } from '../types/clinic';
 
 const DB_NAME = 'SigmaUsgDesktopDB';
@@ -71,10 +72,22 @@ async function idbDelete(key: string): Promise<void> {
   }
 }
 
+async function applySecureCredentials(db: ClinicDatabase): Promise<ClinicDatabase> {
+  const secured = await secureEmployeeAccounts(db.employees || []);
+  const base = secured ?? db.employees ?? [];
+  const withUser = ensureDefaultUserAccount(base);
+  const employees = withUser ?? secured;
+  return employees ? { ...db, employees } : db;
+}
+
 export async function loadClinicDatabase(): Promise<ClinicDatabase> {
   const stored = await idbGet<ClinicDatabase>(DATA_KEY);
   if (stored && stored.schemaVersion && Array.isArray(stored.labTests)) {
-    return stored;
+    const migrated = await applySecureCredentials(stored);
+    if (migrated !== stored) {
+      await saveClinicDatabase(migrated);
+    }
+    return migrated;
   }
 
   try {
@@ -82,8 +95,9 @@ export async function loadClinicDatabase(): Promise<ClinicDatabase> {
     if (lsRaw) {
       const parsed = JSON.parse(lsRaw) as ClinicDatabase;
       if (parsed && parsed.schemaVersion && Array.isArray(parsed.labTests)) {
-        await idbSet(DATA_KEY, parsed);
-        return parsed;
+        const migrated = await applySecureCredentials(parsed);
+        await saveClinicDatabase(migrated);
+        return migrated;
       }
     }
   } catch {

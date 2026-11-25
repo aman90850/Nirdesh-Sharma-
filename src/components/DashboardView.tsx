@@ -1,19 +1,10 @@
 import React from 'react';
-import {
-  ArrowRight,
-  ClipboardPlus,
-  FileSpreadsheet,
-  FolderSync,
-  MessageCircle,
-  Printer,
-  Wallet,
-} from 'lucide-react';
+import { ClipboardPlus, FileSpreadsheet, MessageCircle, Printer, Wallet } from 'lucide-react';
 import type { ClinicDatabase, EmployeeAccount, NavRoute, PatientBill } from '../types/clinic';
 import {
   buildWhatsAppBillLink,
   computeEodSummary,
   formatCurrency,
-  formatDisplayDate,
   formatPaymentModesLabel,
 } from '../utils/calculations';
 import { getLocalDateISO } from '../data/seedData';
@@ -26,6 +17,26 @@ interface DashboardViewProps {
   onOpenFolderSync: () => void;
 }
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+const TillRow: React.FC<{ label: string; value: React.ReactNode; strong?: boolean; tone?: string }> = ({
+  label,
+  value,
+  strong,
+  tone = 'text-slate-900',
+}) => (
+  <div className={`till-row ${strong ? 'text-[17px] font-bold' : 'text-[15px]'}`}>
+    <span className={strong ? 'text-slate-900' : 'text-slate-600'}>{label}</span>
+    <span className="leader" aria-hidden="true" />
+    <span className={`${tone} ${strong ? '' : 'font-semibold'}`}>{value}</span>
+  </div>
+);
+
 export const DashboardView: React.FC<DashboardViewProps> = ({
   db,
   currentUser,
@@ -33,227 +44,170 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onPrintReceipt,
   onOpenFolderSync,
 }) => {
+  const isAdmin = currentUser.role === 'Admin';
   const today = getLocalDateISO();
   const eod = computeEodSummary(db, today);
   const totalPendingDuesAll = db.patients.reduce((sum, p) => sum + p.balance, 0);
-
+  const reportsPending = eod.billsRegisteredToday.reduce(
+    (n, b) => n + b.items.filter((i) => i.status === 'Pending').length,
+    0
+  );
   const doctorMap = new Map(db.doctors.map((d) => [d.id, d.name]));
 
+  const now = new Date();
+  const locale = 'en-IN';
+  const weekday = now.toLocaleDateString(locale, { weekday: 'long' });
+  const dayMonth = now.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const counts: Array<{ label: string; value: number; route: NavRoute }> = [
+    { label: 'Patients in register', value: db.patients.length, route: 'patient-view' },
+    { label: 'Doctors', value: db.doctors.length, route: 'doctor-view' },
+    { label: 'Asha workers', value: db.ashas.length, route: 'asha-view' },
+    { label: 'Tests in master', value: db.labTests.length, route: 'lab-master' },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header Row */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900 tracking-tight">
-            {db.settings.centerName}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Business Date: <span className="font-mono font-medium text-slate-700">{formatDisplayDate(today)}</span>
-            <span className="mx-2 text-slate-300">·</span>
-            Signed in as <span className="font-medium text-slate-700">{currentUser.name}</span> ({currentUser.role})
-          </p>
-        </div>
+    <div className="space-y-7">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-7 items-start">
+        {/* Left: the day */}
+        <div className="space-y-7 min-w-0">
+          <header className="flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="text-[15px] text-slate-600">
+                {greeting()}, {currentUser.name}
+              </p>
+              <h1 className="mt-1 font-display text-[clamp(2.25rem,4vw,3.25rem)] font-extrabold leading-[1.02] tracking-[-0.02em] text-[#1E2B4D]">
+                {weekday},
+                <br />
+                {dayMonth}
+              </h1>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => onNavigate('patient-add')}
+                className="inline-flex items-center gap-2 rounded-md bg-[#128041] px-5 py-3 text-[15px] font-semibold text-white hover:bg-[#0E6A35] transition-colors whitespace-nowrap cursor-pointer"
+              >
+                <ClipboardPlus className="w-4.5 h-4.5" />
+                <span>{'New patient bill'}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('report-eod')}
+                  className="inline-flex items-center gap-2 rounded-md border border-[#1E2B4D]/25 bg-white px-4 py-3 text-[15px] font-semibold text-[#1E2B4D] hover:bg-[#1E2B4D]/5 transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4.5 h-4.5" />
+                  <span>{'Close the day'}</span>
+                </button>
+              )}
+            </div>
+          </header>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => onNavigate('patient-add')}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] transition-colors whitespace-nowrap cursor-pointer"
+          {/* Register counts: one strip, not four cards */}
+          <nav
+            aria-label="Clinic records"
+            className="grid grid-cols-2 md:grid-cols-4 rounded-xl border border-[#DCE1DA] bg-white divide-x divide-y md:divide-y-0 divide-[#DCE1DA] overflow-hidden"
           >
-            <ClipboardPlus className="w-4 h-4" />
-            <span>Register &amp; Bill Patient</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate('report-eod')}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors whitespace-nowrap cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-[#16A34A]" />
-            <span>End-of-Day Summary</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Core Reference Metrics (Total Patient, Total Dr., Total Asha + Today Cash Drawer) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="text-xs font-semibold text-slate-500">Total Patients</div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-bold text-slate-900 tabular-nums">
-              {db.patients.length}
-            </span>
-            <span className="text-xs text-slate-500 tabular-nums">
-              {eod.patientCount} today
-            </span>
-          </div>
+            {counts.map((c) => (
+              <button
+                key={c.label}
+                type="button"
+                onClick={() => onNavigate(c.route)}
+                className="px-5 py-4 text-left hover:bg-[#F5F7F2] transition-colors cursor-pointer"
+              >
+                <div className="font-display text-[28px] font-bold leading-none text-[#1E2B4D] tabular-nums">{c.value}</div>
+                <div className="mt-1.5 text-sm text-slate-600">{c.label}</div>
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="text-xs font-semibold text-slate-500">Total Doctors</div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-bold text-slate-900 tabular-nums">
-              {db.doctors.length}
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigate('doctor-view')}
-              className="text-xs font-semibold text-[#2B4C8C] hover:underline cursor-pointer"
-            >
-              View list
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="text-xs font-semibold text-slate-500">Total Asha</div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-bold text-slate-900 tabular-nums">
-              {db.ashas.length}
-            </span>
-            <button
-              type="button"
-              onClick={() => onNavigate('asha-view')}
-              className="text-xs font-semibold text-[#2B4C8C] hover:underline cursor-pointer"
-            >
-              View list
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="text-xs font-semibold text-slate-500">Today&apos;s Net Cash in Drawer</div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="font-mono text-2xl font-bold text-emerald-700 tabular-nums">
-              {formatCurrency(eod.netCashInDrawer)}
-            </span>
-            <span className="text-xs text-slate-500 tabular-nums">
-              Total {formatCurrency(eod.totalCollected)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Today's Financial Breakdown Strip */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <h2 className="font-display text-sm font-bold text-slate-900">
-              Today&apos;s Collection &amp; Split Payment Summary
-            </h2>
-            <button
-              type="button"
-              onClick={() => onNavigate('report-eod')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2B4C8C] hover:underline cursor-pointer"
-            >
-              <span>Full Closing Report</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <div className="text-xs text-slate-500">Cash Collected</div>
-              <div className="mt-1 font-mono text-lg font-bold text-slate-900 tabular-nums">
-                {formatCurrency(eod.cashCollected)}
+        {/* Right: the till slip — the day's figures, printed like the clinic's own receipts */}
+        <aside aria-label={isAdmin ? "Today's cash summary" : "Today's work"}>
+          <div className="till-slip till-print">
+            <div className="text-center">
+              <div className="font-display text-base font-bold text-[#1E2B4D]">{db.settings.centerName}</div>
+              <div className="mt-0.5 text-sm text-slate-500">
+                {isAdmin ? 'Till for' : 'Work for'} {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
               </div>
             </div>
-            <div>
-              <div className="text-xs text-slate-500">UPI Collected</div>
-              <div className="mt-1 font-mono text-lg font-bold text-slate-900 tabular-nums">
-                {formatCurrency(eod.upiCollected)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Card Collected</div>
-              <div className="mt-1 font-mono text-lg font-bold text-slate-900 tabular-nums">
-                {formatCurrency(eod.cardCollected)}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Expenses (DR)</div>
-              <div className="mt-1 font-mono text-lg font-bold text-red-600 tabular-nums">
-                {formatCurrency(eod.totalDR)}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-600">
-            <span>
-              Tests Today: <strong className="font-mono text-slate-900">{eod.totalTests}</strong> ({eod.ultrasoundCount} USG · {eod.xrayCount} X-Ray)
-            </span>
-            <span>
-              All Pending Dues: <strong className="font-mono text-amber-700">{formatCurrency(totalPendingDuesAll)}</strong>
-            </span>
-            {currentUser.role === 'Admin' && (
-              <span>
-                Today DC Payable: <strong className="font-mono text-slate-900">{formatCurrency(eod.doctorDcAccrued + eod.ashaDcAccrued)}</strong>
-              </span>
+            <div className="till-cut" />
+            {isAdmin ? (
+              <>
+                <TillRow label={'Cash'} value={formatCurrency(eod.cashCollected)} />
+                <TillRow label={'UPI'} value={formatCurrency(eod.upiCollected)} />
+                <TillRow label={'Card'} value={formatCurrency(eod.cardCollected)} />
+                <TillRow label={'Collected'} value={formatCurrency(eod.totalCollected)} />
+                <TillRow label={'Expenses paid'} value={`− ${formatCurrency(eod.totalDR)}`} tone="text-[#B42318]" />
+                <div className="till-cut" />
+                <TillRow label={'Cash in drawer'} value={formatCurrency(eod.netCashInDrawer)} strong tone="text-[#0E6A35]" />
+                <div className="till-cut" />
+                <TillRow label={'Dues outstanding'} value={formatCurrency(totalPendingDuesAll)} tone="text-[#C8740A]" />
+                <TillRow label={'DC payable today'} value={formatCurrency(eod.doctorDcAccrued + eod.ashaDcAccrued)} />
+                <TillRow label={'Tests done'} value={`${eod.totalTests} (${eod.ultrasoundCount} USG, ${eod.xrayCount} X-ray)`} />
+              </>
+            ) : (
+              <>
+                <TillRow label={'Patients billed'} value={eod.patientCount} />
+                <TillRow label={'USG scans'} value={eod.ultrasoundCount} />
+                <TillRow label={'X-rays'} value={eod.xrayCount} />
+                <div className="till-cut" />
+                <TillRow label={'Reports pending'} value={reportsPending} strong tone={reportsPending ? 'text-[#C8740A]' : 'text-[#0E6A35]'} />
+              </>
             )}
-          </div>
-        </div>
-
-        {/* Portable Folder Sync Quick Card */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-bold font-display text-slate-900">
-              <FolderSync className="w-4 h-4 text-[#2B4C8C]" />
-              <span>Local PC Folder Sync</span>
+            <div className="mt-4 text-center text-xs text-slate-400">
+              {isAdmin ? 'Updates as bills are saved' : 'Money totals are with the Admin'}
             </div>
-            <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-              Your database is stored locally on this PC. Link a sync folder so copying that folder to another computer automatically fetches and merges all clinic data.
-            </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
-            <span className="text-xs text-slate-500 truncate">
-              {db.settings.linkedFolderName
-                ? `Folder: ${db.settings.linkedFolderName}`
-                : 'No folder linked yet'}
-            </span>
+
+          {isAdmin && (
             <button
               type="button"
               onClick={onOpenFolderSync}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors whitespace-nowrap cursor-pointer"
+              className="mt-4 w-full rounded-md border border-[#DCE1DA] bg-white px-4 py-3 text-left text-sm hover:bg-[#F5F7F2] transition-colors cursor-pointer"
             >
-              Manage Sync
+              <span className="font-semibold text-[#1E2B4D]">{'Backup folder:'} </span>
+              <span className="text-slate-600">{db.settings.linkedFolderName || 'not linked yet'}</span>
             </button>
-          </div>
-        </div>
+          )}
+        </aside>
       </div>
 
       {/* Today's Patient Registrations Table */}
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <section className="rounded-xl border border-[#DCE1DA] bg-white overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-sm font-bold text-slate-900">
-              Today&apos;s Patient Bills ({eod.billsRegisteredToday.length})
+            <h2 className="font-display text-xl font-bold text-[#1E2B4D]">
+              {"Today's register"}
             </h2>
-            <p className="text-xs text-slate-500">
-              Click Print for smart auto-detecting POS/A4 receipts or send bill details directly on WhatsApp.
+            <p className="text-sm text-slate-500">
+              {eod.billsRegisteredToday.length === 1 ? '1 bill' : `${eod.billsRegisteredToday.length} bills`} so far. Print a receipt or send it on WhatsApp.
             </p>
           </div>
           <button
             type="button"
             onClick={() => onNavigate('patient-view')}
-            className="text-xs font-semibold text-[#2B4C8C] hover:underline cursor-pointer"
+            className="text-xs font-semibold text-[#1E2B4D] underline-offset-4 hover:underline cursor-pointer"
           >
-            View All Patients
+            {'All patients'}
           </button>
         </div>
 
         {eod.billsRegisteredToday.length === 0 ? (
           <div className="p-10 text-center">
             <Wallet className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="mt-3 text-sm font-medium text-slate-700">No patients billed today yet</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Register your first patient to generate a sequential USG number and printable receipt.
+            <p className="mt-3 text-[15px] font-semibold text-slate-800">{'No bills yet today'}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              The first patient you bill gets the next USG number and a receipt to print.
             </p>
             <button
               type="button"
               onClick={() => onNavigate('patient-add')}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] cursor-pointer"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
             >
               <ClipboardPlus className="w-3.5 h-3.5" />
-              <span>Add First Patient</span>
+              <span>{'Bill the first patient'}</span>
             </button>
           </div>
         ) : (
@@ -277,7 +231,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   const waUrl = buildWhatsAppBillLink(bill, db.settings, docName);
                   return (
                     <tr key={bill.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2.5 px-4 font-mono text-xs font-semibold text-[#2B4C8C] whitespace-nowrap">
+                      <td className="py-2.5 px-4 font-mono text-xs font-semibold text-[#1E2B4D] whitespace-nowrap">
                         {bill.usgNo}
                       </td>
                       <td className="py-2.5 px-4">
@@ -321,7 +275,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                             title="Print Adaptive Receipt"
                           >
-                            <Printer className="w-3.5 h-3.5 text-[#2B4C8C]" />
+                            <Printer className="w-3.5 h-3.5 text-[#1E2B4D]" />
                             <span>Print</span>
                           </button>
                           <a
@@ -343,7 +297,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </table>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

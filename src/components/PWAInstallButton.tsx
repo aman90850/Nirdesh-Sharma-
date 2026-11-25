@@ -27,7 +27,7 @@ export const PWAInstallButton: React.FC = () => {
         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#1E2B4D] hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
         title="Install Sigma USG as a standalone Desktop App"
       >
-        {isInstallable ? <Download className="w-3.5 h-3.5 text-[#2B4C8C]" /> : <MonitorDown className="w-3.5 h-3.5 text-[#2B4C8C]" />}
+        {isInstallable ? <Download className="w-3.5 h-3.5 text-[#1E2B4D]" /> : <MonitorDown className="w-3.5 h-3.5 text-[#1E2B4D]" />}
         <span>{isIOS ? 'Install App' : 'Install Desktop App'}</span>
       </button>
 
@@ -77,7 +77,7 @@ export const PWAInstallButton: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowGuide(false)}
-                className="rounded-lg bg-[#2B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1E3A70] transition-colors cursor-pointer"
+                className="rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] transition-colors cursor-pointer"
               >
                 Got It
               </button>

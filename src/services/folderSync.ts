@@ -1,4 +1,11 @@
 import type { ClinicDatabase } from '../types/clinic';
+import { secureEmployeeAccounts } from './auth';
+
+async function secureIncoming(db: ClinicDatabase): Promise<ClinicDatabase> {
+  if (!Array.isArray(db.employees)) return { ...db, employees: [] };
+  const employees = await secureEmployeeAccounts(db.employees);
+  return employees ? { ...db, employees } : db;
+}
 
 export const SYNC_FILENAME = 'sigma-usg-db.json';
 
@@ -44,6 +51,13 @@ export function mergeDatabases(localDb: ClinicDatabase, incomingDb: ClinicDataba
   const patients = mergeCollection(localDb.patients, incomingDb.patients || []);
   const expenses = mergeCollection(localDb.expenses, incomingDb.expenses || []);
   const employees = mergeCollection(localDb.employees, incomingDb.employees || []);
+  const activityLog = mergeCollection(localDb.activityLog || [], incomingDb.activityLog || [])
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 3000);
+  const latestBackup = [localDb.settings.lastBackupAt, incomingDb.settings?.lastBackupAt]
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .pop() ?? null;
 
   const localSettingsTime = localDb.settings.updatedAt ? Date.parse(localDb.settings.updatedAt) : 0;
   const incomingSettingsTime = incomingDb.settings?.updatedAt
@@ -70,8 +84,10 @@ export function mergeDatabases(localDb: ClinicDatabase, incomingDb: ClinicDataba
     patients,
     expenses,
     employees,
+    activityLog,
     settings: {
       ...baseSettings,
+      lastBackupAt: latestBackup,
       nextRegNumber,
       lastSyncedAt: nowIso,
       linkedFolderName: localDb.settings.linkedFolderName ?? baseSettings.linkedFolderName ?? null,
@@ -140,7 +156,7 @@ export async function readDatabaseFromFolder(
     const text = await file.text();
     const parsed = JSON.parse(text) as ClinicDatabase;
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.patients)) {
-      return parsed;
+      return await secureIncoming(parsed);
     }
     return null;
   } catch {
@@ -210,5 +226,5 @@ export async function parseImportedDatabaseFile(file: File): Promise<ClinicDatab
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.patients) || !Array.isArray(parsed.labTests)) {
     throw new Error('Selected file is not a valid Sigma USG database sync file.');
   }
-  return parsed;
+  return secureIncoming(parsed);
 }

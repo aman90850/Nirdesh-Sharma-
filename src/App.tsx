@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Info, X, AlertCircle } from 'lucide-react';
 import type {
+  ActivityEntry,
   AshaWorker,
   ClinicDatabase,
   ClinicSettings,
@@ -33,6 +34,8 @@ import {
   writeDatabaseToFolder,
 } from './services/folderSync';
 import { computePaymentSummary } from './utils/calculations';
+import { canViewRoute, roleLabel } from './utils/roles';
+import { clearSession, hashPassword, readSession, verifyPassword, writeSession } from './services/auth';
 import { printPatientReceipt } from './utils/printDocument';
 import { getLocalDateISO } from './data/seedData';
 import { LoginView } from './components/LoginView';
@@ -46,22 +49,18 @@ import { EmployeeModule } from './components/EmployeeModule';
 import { SettingsView } from './components/SettingsView';
 import { PrintModal } from './components/PrintModal';
 import { FolderSyncModal } from './components/FolderSyncModal';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { ActivityLogView } from './components/ActivityLogView';
 
-const SESSION_KEY = 'sigma_usg_active_user_id_v1';
 
 export default function App() {
   const [db, setDb] = useState<ClinicDatabase | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(SESSION_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => readSession());
   const [activeRoute, setActiveRoute] = useState<NavRoute>('dashboard');
   const [editingPatient, setEditingPatient] = useState<PatientBill | null>(null);
   const [printDoc, setPrintDoc] = useState<PrintDocument | null>(null);
   const [folderSyncOpen, setFolderSyncOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   // Local Folder Sync state
   const folderHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -123,12 +122,29 @@ export default function App() {
     };
   }, []);
 
+  // Who is signed in, for the activity log (kept in a ref so commitDb stays stable)
+  const currentUserRef = useRef<EmployeeAccount | null>(null);
+
   // Central persistence updater: writes IndexedDB + linked PC folder automatically
   const commitDb = useCallback(
-    (updater: (prev: ClinicDatabase) => ClinicDatabase) => {
+    (updater: (prev: ClinicDatabase) => ClinicDatabase, log?: { action: string; detail: string }) => {
       setDb((prev) => {
         if (!prev) return prev;
-        const next = updater(prev);
+        let next = updater(prev);
+        const actor = currentUserRef.current;
+        if (log && actor) {
+          const at = new Date().toISOString();
+          const entry: ActivityEntry = {
+            id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            at,
+            userName: actor.name,
+            role: actor.role,
+            action: log.action,
+            detail: log.detail,
+            updatedAt: at,
+          };
+          next = { ...next, activityLog: [entry, ...(next.activityLog || [])].slice(0, 3000) };
+        }
         void (async () => {
           await saveClinicDatabase(next);
           if (folderHandleRef.current) {
@@ -281,6 +297,12 @@ export default function App() {
 
   const handleImportBundle = async (file: File) => {
     if (!db) return;
+    // Imports can add or overwrite staff accounts, so only an Admin may import.
+    const importer = currentUserId ? db.employees.find((e) => e.id === currentUserId) : null;
+    if (!importer || importer.role !== 'Admin') {
+      pushToast('error', 'Only an Admin can import a database file.');
+      return;
+    }
     try {
       const incoming = await parseImportedDatabaseFile(file);
       const summary = mergeDatabases(db, incoming);
@@ -303,24 +325,57 @@ export default function App() {
     }
   };
 
+  // Automatic daily backup: once a folder is linked, the first save of each day
+  // also writes a dated copy into <folder>/backups/.
+  const lastBackupDay = db?.settings.lastBackupAt ? getLocalDateISO(new Date(db.settings.lastBackupAt)) : null;
+  const hasRecords = Boolean(db && (db.patients.length || db.expenses.length));
+  useEffect(() => {
+    if (!db || !folderConnected || !folderHandleRef.current || !hasRecords) return;
+    const todayIso = getLocalDateISO();
+    if (lastBackupDay === todayIso) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const path = await writeDailyBackupToFolder(folderHandleRef.current!, db, todayIso);
+        if (!cancelled) markBackedUp(`Automatic daily backup: ${path}`);
+      } catch {
+        // Folder permission lost; the reminder banner stays visible
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folderConnected, lastBackupDay, hasRecords]);
+
   const handleSaveDailySnapshot = async (dateStr: string) => {
     if (!db) return;
     if (folderHandleRef.current) {
       try {
         const path = await writeDailyBackupToFolder(folderHandleRef.current, db, dateStr);
-        pushToast('success', `Day closed — saved closing snapshot to ${folderName}/${path}`);
+        markBackedUp(`Saved to folder ${folderName}/${path}`);
+        pushToast('success', `Backup saved to ${folderName}/${path}`);
         return;
       } catch {
         // Fallback to download
       }
     }
     downloadDatabaseBundle(db, `Sigma-EOD-Backup-${dateStr}.json`);
-    pushToast('success', `Downloaded closing backup Sigma-EOD-Backup-${dateStr}.json`);
+    markBackedUp(`Downloaded Sigma-EOD-Backup-${dateStr}.json`);
+    pushToast('success', `Backup downloaded: Sigma-EOD-Backup-${dateStr}.json. Keep it in a safe folder or pen drive.`);
+  };
+
+  const markBackedUp = (detail: string) => {
+    const at = new Date().toISOString();
+    commitDb((prev) => ({ ...prev, settings: { ...prev.settings, lastBackupAt: at } }), {
+      action: 'Backup saved',
+      detail,
+    });
   };
 
   if (!db) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] text-sm text-slate-600">
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F4F0] text-sm text-slate-600">
         Loading Sigma Diagnostic and USG Center...
       </div>
     );
@@ -329,26 +384,22 @@ export default function App() {
   const currentUser = currentUserId
     ? db.employees.find((e) => e.id === currentUserId) || null
     : null;
+  currentUserRef.current = currentUser;
 
   const handleLogin = (account: EmployeeAccount) => {
     setCurrentUserId(account.id);
-    try {
-      localStorage.setItem(SESSION_KEY, account.id);
-    } catch {
-      // Ignore
-    }
+    writeSession(account.id);
+    currentUserRef.current = account;
+    commitDb((prev) => prev, { action: 'Signed in', detail: roleLabel(account.role) });
     setActiveRoute('dashboard');
-    pushToast('success', `Welcome back, ${account.name} (${account.role}).`);
+    pushToast('success', `Welcome back, ${account.name} (${roleLabel(account.role)}).`);
   };
 
   const handleLogout = () => {
+    commitDb((prev) => prev, { action: 'Signed out', detail: '' });
     setCurrentUserId(null);
     setEditingPatient(null);
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {
-      // Ignore
-    }
+    clearSession();
   };
 
   if (!currentUser) {
@@ -371,13 +422,13 @@ export default function App() {
       doctors: isEdit
         ? prev.doctors.map((d) => (d.id === doc.id ? doc : d))
         : [...prev.doctors, doc],
-    }));
+    }), { action: isEdit ? 'Doctor edited' : 'Doctor added', detail: doc.name });
     pushToast('success', isEdit ? `Updated doctor ${doc.name}.` : `Added doctor ${doc.name}.`);
   };
 
   const handleDeleteDoctor = (id: string) => {
     if (!isAdmin) return;
-    commitDb((prev) => ({ ...prev, doctors: prev.doctors.filter((d) => d.id !== id) }));
+    commitDb((prev) => ({ ...prev, doctors: prev.doctors.filter((d) => d.id !== id) }), { action: 'Doctor deleted', detail: db.doctors.find((d) => d.id === id)?.name || id });
     pushToast('info', 'Doctor removed.');
   };
 
@@ -387,13 +438,13 @@ export default function App() {
       ashas: isEdit
         ? prev.ashas.map((a) => (a.id === asha.id ? asha : a))
         : [...prev.ashas, asha],
-    }));
+    }), { action: isEdit ? 'Asha edited' : 'Asha added', detail: asha.name });
     pushToast('success', isEdit ? `Updated Asha ${asha.name}.` : `Added Asha ${asha.name}.`);
   };
 
   const handleDeleteAsha = (id: string) => {
     if (!isAdmin) return;
-    commitDb((prev) => ({ ...prev, ashas: prev.ashas.filter((a) => a.id !== id) }));
+    commitDb((prev) => ({ ...prev, ashas: prev.ashas.filter((a) => a.id !== id) }), { action: 'Asha deleted', detail: db.ashas.find((a) => a.id === id)?.name || id });
     pushToast('info', 'Asha record removed.');
   };
 
@@ -403,19 +454,19 @@ export default function App() {
       labTests: isEdit
         ? prev.labTests.map((t) => (t.id === test.id ? test : t))
         : [test, ...prev.labTests],
-    }));
+    }), { action: isEdit ? 'Test rate edited' : 'Test added', detail: `${test.title} ₹${test.amount}` });
     pushToast('success', isEdit ? `Updated test ${test.title}.` : `Added test ${test.title}.`);
   };
 
   const handleDeleteTest = (id: string) => {
     if (!isAdmin) return;
-    commitDb((prev) => ({ ...prev, labTests: prev.labTests.filter((t) => t.id !== id) }));
+    commitDb((prev) => ({ ...prev, labTests: prev.labTests.filter((t) => t.id !== id) }), { action: 'Test deleted', detail: db.labTests.find((t) => t.id === id)?.title || id });
     pushToast('info', 'Test deleted from USG Master.');
   };
 
   const handleSavePatient = (patient: PatientBill, isEdit: boolean, openPrintAfter: boolean) => {
     if (isEdit && !isAdmin && patient.date !== today) {
-      pushToast('error', 'Operators cannot edit previous-date bills.');
+      pushToast('error', 'Users cannot edit previous-date bills.');
       return;
     }
 
@@ -431,7 +482,7 @@ export default function App() {
             nextRegNumber: prev.settings.nextRegNumber + 1,
             updatedAt: new Date().toISOString(),
           },
-    }));
+    }), { action: isEdit ? 'Bill edited' : 'Bill created', detail: `${patient.usgNo} ${patient.name} · net ₹${patient.netAmount}, paid ₹${patient.paidAmount}` });
 
     pushToast(
       'success',
@@ -463,7 +514,7 @@ export default function App() {
         };
         return updatedTarget;
       }),
-    }));
+    }), { action: 'Due collected', detail: `${db.patients.find((p) => p.id === patientId)?.usgNo || ''} ₹${newPayments.reduce((s, x) => s + x.amount, 0)}` });
     pushToast('success', 'Balance due collection recorded and added to today’s EOD summary.');
     if (updatedTarget) {
       setPrintDoc({ kind: 'receipt', patient: updatedTarget });
@@ -486,7 +537,7 @@ export default function App() {
           updatedAt: new Date().toISOString(),
         };
       }),
-    }));
+    }), { action: status === 'Completed' ? 'Report completed' : 'Report reopened', detail: `${db.patients.find((p) => p.id === patientId)?.usgNo || ''} ${db.patients.find((p) => p.id === patientId)?.items.find((i) => i.id === itemId)?.title || ''}` });
     pushToast('success', 'Test findings updated.');
   };
 
@@ -498,41 +549,66 @@ export default function App() {
     commitDb((prev) => ({
       ...prev,
       patients: prev.patients.filter((p) => p.id !== patientId),
-    }));
+    }), { action: 'Bill deleted', detail: (() => { const b = db.patients.find((p) => p.id === patientId); return b ? `${b.usgNo} ${b.name} · ₹${b.netAmount}` : patientId; })() });
     pushToast('info', 'Patient bill deleted.');
   };
 
   const handleAddExpense = (entry: ExpenseEntry) => {
-    commitDb((prev) => ({ ...prev, expenses: [entry, ...prev.expenses] }));
+    commitDb((prev) => ({ ...prev, expenses: [entry, ...prev.expenses] }), { action: 'Expense added', detail: `${entry.type} ${entry.particular} ₹${entry.amount}` });
     pushToast('success', `Recorded ${entry.type} entry: ${entry.particular}.`);
   };
 
   const handleDeleteExpense = (id: string) => {
     if (!isAdmin) return;
-    commitDb((prev) => ({ ...prev, expenses: prev.expenses.filter((e) => e.id !== id) }));
+    commitDb((prev) => ({ ...prev, expenses: prev.expenses.filter((e) => e.id !== id) }), { action: 'Expense deleted', detail: (() => { const x = db.expenses.find((e) => e.id === id); return x ? `${x.type} ${x.particular} ₹${x.amount}` : id; })() });
     pushToast('info', 'Expense entry deleted.');
   };
 
-  const handleSaveEmployee = (emp: EmployeeAccount, isEdit: boolean) => {
+  const handleSaveEmployee = async (emp: EmployeeAccount, isEdit: boolean) => {
     if (!isAdmin) return;
+    // A blank password on edit keeps the existing (hashed) password.
+    const existing = isEdit ? db.employees.find((e) => e.id === emp.id) : undefined;
+    const password = emp.password
+      ? await hashPassword(emp.password)
+      : existing?.password ?? '';
+    if (!password) return;
+    const secured: EmployeeAccount = { ...emp, password };
     commitDb((prev) => ({
       ...prev,
       employees: isEdit
-        ? prev.employees.map((e) => (e.id === emp.id ? emp : e))
-        : [...prev.employees, emp],
-    }));
+        ? prev.employees.map((e) => (e.id === secured.id ? secured : e))
+        : [...prev.employees, secured],
+    }), { action: isEdit ? 'Staff account edited' : 'Staff account created', detail: `${secured.name} (${roleLabel(secured.role)})${emp.password ? ', password set' : ''}` });
     pushToast('success', isEdit ? `Updated staff ${emp.name}.` : `Created account for ${emp.name}.`);
   };
 
   const handleDeleteEmployee = (id: string) => {
     if (!isAdmin || id === currentUser.id) return;
-    commitDb((prev) => ({ ...prev, employees: prev.employees.filter((e) => e.id !== id) }));
+    commitDb((prev) => ({ ...prev, employees: prev.employees.filter((e) => e.id !== id) }), { action: 'Staff account deleted', detail: db.employees.find((e) => e.id === id)?.name || id });
     pushToast('info', 'Staff account removed.');
+  };
+
+  const handleChangeOwnPassword = async (current: string, next: string): Promise<string | null> => {
+    const me = db.employees.find((e) => e.id === currentUser.id);
+    if (!me) return 'Account not found. Sign in again.';
+    if (!(await verifyPassword(current, me.password))) return 'Current password is wrong.';
+    const hashed = await hashPassword(next);
+    commitDb(
+      (prev) => ({
+        ...prev,
+        employees: prev.employees.map((e) =>
+          e.id === me.id ? { ...e, password: hashed, updatedAt: new Date().toISOString() } : e
+        ),
+      }),
+      { action: 'Password changed', detail: `${me.name} changed their own password` }
+    );
+    pushToast('success', 'Password changed. Use the new password next time you sign in.');
+    return null;
   };
 
   const handleSaveSettings = (updated: ClinicSettings) => {
     if (!isAdmin) return;
-    commitDb((prev) => ({ ...prev, settings: updated }));
+    commitDb((prev) => ({ ...prev, settings: updated }), { action: 'Settings changed', detail: 'Clinic settings updated' });
     pushToast('success', 'Clinic settings saved.');
   };
 
@@ -548,7 +624,27 @@ export default function App() {
   };
 
   const renderMainView = () => {
+    if (!canViewRoute(currentUser.role, activeRoute)) {
+      return (
+        <div className="mx-auto my-10 max-w-md rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-2xl">🔒</div>
+          <h2 className="mt-4 font-display text-lg font-bold text-slate-900">Admin access required</h2>
+          <p className="mt-1.5 text-sm text-slate-600">
+            Summaries and reports are only available to the Admin login.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveRoute('dashboard')}
+            className="mt-5 rounded-lg bg-[#1E2B4D] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142036] cursor-pointer"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      );
+    }
     switch (activeRoute) {
+      case 'activity-log':
+        return <ActivityLogView entries={db.activityLog || []} />;
       case 'dashboard':
         return (
           <DashboardView
@@ -710,6 +806,14 @@ export default function App() {
         onOpenFolderSync={() => setFolderSyncOpen(true)}
         onResumeFolder={handleResumeFolder}
         onLogout={handleLogout}
+        onChangePassword={() => setChangePwOpen(true)}
+        backupDue={
+          isAdmin &&
+          (db.patients.length > 0 || db.expenses.length > 0) &&
+          (!db.settings.lastBackupAt || getLocalDateISO(new Date(db.settings.lastBackupAt)) !== today)
+        }
+        lastBackupAt={db.settings.lastBackupAt ?? null}
+        onBackupNow={() => handleSaveDailySnapshot(today)}
       >
         {renderMainView()}
       </LayoutShell>
@@ -722,6 +826,12 @@ export default function App() {
         defaultPrinterMode={db.settings.defaultPrinterMode}
         onChangeDefaultPrinterMode={handleChangeDefaultPrinterMode}
         onClose={() => setPrintDoc(null)}
+      />
+
+      <ChangePasswordModal
+        open={changePwOpen}
+        onClose={() => setChangePwOpen(false)}
+        onSubmit={handleChangeOwnPassword}
       />
 
       {/* Local PC Folder Sync & Portable Transfer Modal */}
@@ -761,7 +871,7 @@ export default function App() {
               ) : t.type === 'error' ? (
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
               ) : (
-                <Info className="w-4 h-4 text-[#2B4C8C] shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-[#1E2B4D] shrink-0 mt-0.5" />
               )}
               <span className="flex-1 leading-snug">{t.text}</span>
               <button

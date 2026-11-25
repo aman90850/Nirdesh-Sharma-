@@ -31,7 +31,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <div className="flex items-start gap-3">
             <div
               className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                destructive ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-[#2B4C8C]'
+                destructive ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-[#1E2B4D]'
               }`}
             >
               <AlertTriangle className="h-4 w-4" />
@@ -65,7 +65,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             className={`rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer ${
               destructive
                 ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-[#2B4C8C] hover:bg-[#1E3A70]'
+                : 'bg-[#1E2B4D] hover:bg-[#142036]'
             }`}
           >
             {confirmLabel}

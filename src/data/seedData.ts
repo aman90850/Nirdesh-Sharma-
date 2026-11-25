@@ -1,4 +1,9 @@
 import type { ClinicDatabase, EmployeeAccount } from '../types/clinic';
+import {
+  DEFAULT_ADMIN_PASSWORD_HASH,
+  DEFAULT_ADMIN_USERNAME,
+  ensureDefaultUserAccount,
+} from '../services/auth';
 
 export function getLocalDateISO(date = new Date()): string {
   const y = date.getFullYear();
@@ -18,8 +23,9 @@ export function createSeedDatabase(): ClinicDatabase {
       name: 'Admin',
       empNo: '1',
       contactNo: '',
-      emailOrUsername: 'Sigmaadmin',
-      password: 'sigma1420',
+      emailOrUsername: DEFAULT_ADMIN_USERNAME,
+      // Stored as a salted hash only; the plain password is never in the code.
+      password: DEFAULT_ADMIN_PASSWORD_HASH,
       role: 'Admin',
       updatedAt: nowIso,
     },
@@ -33,7 +39,7 @@ export function createSeedDatabase(): ClinicDatabase {
     labTests: [],
     patients: [],
     expenses: [],
-    employees,
+    employees: ensureDefaultUserAccount(employees) ?? employees,
     settings: {
       centerName: 'Sigma Diagnostic and USG Center',
       tagline: '',

@@ -7,7 +7,10 @@ import {
   FileSpreadsheet,
   FlaskConical,
   FolderSync,
+  HardDriveDownload,
   HeartHandshake,
+  History,
+  KeyRound,
   LayoutDashboard,
   Lock,
   LogOut,
@@ -20,6 +23,9 @@ import {
 } from 'lucide-react';
 import type { ClinicSettings, EmployeeAccount, NavRoute } from '../types/clinic';
 import { SigmaLogo } from './SigmaLogo';
+import { PoweredBy } from './PoweredBy';
+import { roleLabel } from '../utils/roles';
+import { ThemeToggle } from './ThemeToggle';
 import { OfflineIndicator, PWAInstallButton } from './PWAInstallButton';
 
 interface LayoutShellProps {
@@ -33,6 +39,10 @@ interface LayoutShellProps {
   onOpenFolderSync: () => void;
   onResumeFolder: () => void;
   onLogout: () => void;
+  onChangePassword: () => void;
+  backupDue: boolean;
+  lastBackupAt: string | null;
+  onBackupNow: () => void;
   children: React.ReactNode;
 }
 
@@ -55,19 +65,20 @@ const ROUTE_BREADCRUMBS: Record<NavRoute, [string, string]> = {
   'doctor-view': ['Doctor', 'View Doctors'],
   'asha-add': ['Asha', 'Add Asha'],
   'asha-view': ['Asha', 'View Asha'],
-  'patient-add': ['Manage Patient', 'Add Patient & Billing'],
-  'patient-view': ['Manage Patient', 'View Patients'],
-  'patient-tests': ['Manage Patient', 'View Patient Tests'],
-  'lab-master': ['Lab Test', 'USG & X-Ray Master'],
-  'report-eod': ['Manage Report', 'End-of-Day Transaction Summary'],
+  'patient-add': ['Manage Patient', 'New patient bill'],
+  'patient-view': ['Manage Patient', 'Patients'],
+  'patient-tests': ['Manage Patient', 'Test reports'],
+  'lab-master': ['Lab Test', 'Test master'],
+  'report-eod': ['Manage Report', 'End-of-day summary'],
   'report-expense-add': ['Manage Report', 'Add Expense (CR / DR)'],
   'report-expense-view': ['Manage Report', 'View Expenses'],
   'report-doctor': ['Manage Report', "Doctor's Report"],
-  'report-dc': ['Manage Report', 'Dr. & Asha DC Commission Report'],
+  'report-dc': ['Manage Report', 'DC commission'],
   'report-progress': ['Manage Report', 'Dr. Progress Report'],
   'employee-view': ['Manage Employee', 'View Employees'],
   'employee-account': ['Manage Employee', 'View Accounts & Roles'],
-  settings: ['System', 'Clinic Settings & Sync'],
+  settings: ['System', 'Clinic settings'],
+  'activity-log': ['System', 'Activity log'],
 };
 
 export const LayoutShell: React.FC<LayoutShellProps> = ({
@@ -81,6 +92,10 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
   onOpenFolderSync,
   onResumeFolder,
   onLogout,
+  onChangePassword,
+  backupDue,
+  lastBackupAt,
+  onBackupNow,
   children,
 }) => {
   const isAdmin = currentUser.role === 'Admin';
@@ -105,6 +120,7 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
       id: 'eod-direct',
       label: 'End-of-Day Summary',
       icon: <FileSpreadsheet className="w-4 h-4" />,
+      adminOnly: true,
       route: 'report-eod',
     },
     {
@@ -146,12 +162,12 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
       label: 'Manage Report',
       icon: <BarChart3 className="w-4 h-4" />,
       children: [
-        { route: 'report-eod', label: 'End-of-Day Summary' },
+        { route: 'report-eod', label: 'End-of-Day Summary', adminOnly: true },
         { route: 'report-expense-add', label: 'Add Expense' },
         { route: 'report-expense-view', label: 'View Expense' },
         { route: 'report-doctor', label: "Doctor's Report", adminOnly: true },
         { route: 'report-dc', label: 'Dr. Dc Report', adminOnly: true },
-        { route: 'report-progress', label: 'Dr Progress Report' },
+        { route: 'report-progress', label: 'Dr Progress Report', adminOnly: true },
       ],
     },
     {
@@ -171,6 +187,13 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
       adminOnly: true,
       route: 'settings',
     },
+    {
+      id: 'activity-log',
+      label: 'Activity log',
+      icon: <History className="w-4 h-4" />,
+      adminOnly: true,
+      route: 'activity-log',
+    },
   ];
 
   const toggleGroup = (id: string) => {
@@ -185,7 +208,7 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
   const [sectionCrumb, pageCrumb] = ROUTE_BREADCRUMBS[activeRoute] || ['Dashboard', 'Overview'];
 
   const renderSidebarContent = () => (
-    <div className="flex h-full flex-col bg-[#1E2B4D] text-slate-200">
+    <div className="brand-panel flex h-full flex-col bg-[#1E2B4D] text-slate-200">
       {/* Brand Block */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
         <button
@@ -213,9 +236,7 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
 
       {/* Menu List */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <div className="px-3 pb-1.5 text-[11px] font-semibold tracking-wider text-slate-400">
-          Menu
-        </div>
+
         {navGroups.map((group) => {
           if (group.adminOnly && !isAdmin) return null;
 
@@ -226,10 +247,11 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
                 key={group.id}
                 type="button"
                 onClick={() => handleSelectRoute(group.route!)}
-                className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                aria-current={active ? 'page' : undefined}
+                className={`relative w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-[15px] transition-colors whitespace-nowrap cursor-pointer ${
                   active
-                    ? 'bg-[#2B4C8C] text-white'
-                    : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                    ? 'bg-white/[0.09] text-white font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:bg-[#3DD07A]'
+                    : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
                 {group.icon}
@@ -249,10 +271,9 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className={`w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                  isChildActive
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                aria-expanded={isOpen}
+                className={`w-full flex items-center justify-between gap-2 rounded-md px-3 py-2 text-[15px] transition-colors whitespace-nowrap cursor-pointer ${
+                  isChildActive ? 'text-white font-semibold' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
                 <span className="flex items-center gap-2.5 min-w-0">
@@ -267,7 +288,7 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
               </button>
 
               {isOpen && (
-                <div className="mt-1 ml-4 pl-3 border-l border-white/12 space-y-0.5">
+                <div className="mt-0.5 mb-1 ml-5 pl-3 border-l border-white/10 space-y-0.5">
                   {visibleChildren.map((child) => {
                     const active = activeRoute === child.route;
                     return (
@@ -275,10 +296,11 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
                         key={child.route}
                         type="button"
                         onClick={() => handleSelectRoute(child.route)}
-                        className={`w-full flex items-center justify-between rounded-md px-2.5 py-1.5 text-[13px] transition-colors whitespace-nowrap cursor-pointer ${
+                        aria-current={active ? 'page' : undefined}
+                        className={`relative w-full flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors whitespace-nowrap cursor-pointer ${
                           active
-                            ? 'bg-[#2B4C8C] text-white font-semibold'
-                            : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                            ? 'bg-white/[0.09] text-white font-semibold before:absolute before:-left-[13px] before:top-1 before:bottom-1 before:w-[3px] before:rounded-full before:bg-[#3DD07A]'
+                            : 'text-slate-400 hover:bg-white/[0.06] hover:text-white'
                         }`}
                       >
                         <span className="truncate">{child.label}</span>
@@ -295,10 +317,10 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
           <div className="mt-4 mx-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-[11px] text-slate-300">
             <div className="flex items-center gap-1.5 font-semibold text-white">
               <Lock className="w-3 h-3 text-amber-400" />
-              <span>Operator Mode Active</span>
+              <span>{'User Access'}</span>
             </div>
             <p className="mt-1 text-slate-400 leading-relaxed">
-              Deleting bills, backdated edits, and Doctor/Asha DC Commission reports require Admin login.
+              {'Summaries, reports, deleting bills and backdated edits need the Admin login.'}
             </p>
           </div>
         )}
@@ -309,21 +331,26 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
         <button
           type="button"
           onClick={() => handleSelectRoute('patient-add')}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#16A34A] px-3 py-2 text-xs font-semibold text-white hover:bg-[#15803D] transition-colors whitespace-nowrap cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-md bg-[#128041] px-3 py-2.5 text-sm font-semibold text-white hover:bg-[#0E6A35] transition-colors whitespace-nowrap cursor-pointer"
         >
           <ClipboardList className="w-3.5 h-3.5" />
-          <span>New Patient Bill</span>
+          <span>{'New Patient Bill'}</span>
         </button>
-        <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
-          <span className="truncate">{currentUser.name}</span>
-          <span className="font-mono text-slate-300">{currentUser.role}</span>
+        <div className="flex items-center gap-2.5 px-1 py-1">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white ring-1 ring-white/20">
+            {currentUser.name.trim().charAt(0).toUpperCase() || 'U'}
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-xs font-semibold text-white">{currentUser.name}</div>
+            <div className="text-[11px] text-slate-400">{roleLabel(currentUser.role)}</div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div id="sigma-app-shell" className="min-h-screen flex bg-[#F8FAFC]">
+    <div id="sigma-app-shell" className="min-h-screen flex bg-[#F2F4F0]">
       {/* Desktop Sidebar */}
       <aside className="no-print hidden lg:block w-64 shrink-0 border-r border-slate-200 sticky top-0 h-screen">
         {renderSidebarContent()}
@@ -344,7 +371,7 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar (1-row clinical contract: Breadcrumbs left, Sync + Install + User right) */}
-        <header className="no-print sticky top-0 z-30 h-14 border-b border-slate-200 bg-white px-4 sm:px-6 flex items-center justify-between gap-4">
+        <header className="no-print sticky top-0 z-30 h-16 border-b border-[#DCE1DA] bg-[#F2F4F0] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -355,11 +382,15 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2 text-sm min-w-0">
-              <span className="hidden sm:inline font-medium text-slate-500 whitespace-nowrap">
-                {sectionCrumb}
-              </span>
-              <span className="hidden sm:inline text-slate-300">/</span>
-              <span className="font-display font-bold text-slate-900 truncate">{pageCrumb}</span>
+              {sectionCrumb && (
+                <>
+                  <span className="hidden sm:inline font-medium text-slate-500 whitespace-nowrap">
+                    {sectionCrumb}
+                  </span>
+                  <span className="hidden sm:inline text-slate-300">/</span>
+                </>
+              )}
+              <span className="font-display text-lg font-bold text-[#1E2B4D] truncate">{pageCrumb}</span>
             </div>
           </div>
 
@@ -389,16 +420,36 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
                 <span>{folderConnected ? `Synced: ${folderName || 'Folder'}` : 'Folder Sync'}</span>
               </button>
             )}
-
+            <ThemeToggle />
             <PWAInstallButton />
 
-            <div className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200 text-xs text-slate-600 whitespace-nowrap">
-              <span className="font-semibold text-slate-800">{currentUser.name}</span>
-              <span aria-hidden="true">·</span>
-              <span className={isAdmin ? 'text-[#2B4C8C] font-semibold' : 'text-slate-500'}>
-                {currentUser.role}
+            <div className="hidden md:flex items-center gap-2.5 pl-3 border-l border-slate-200 whitespace-nowrap">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1E2B4D] text-xs font-bold text-white">
+                {currentUser.name.trim().charAt(0).toUpperCase() || 'U'}
               </span>
+              <div className="leading-tight">
+                {currentUser.name.trim().toLowerCase() !== roleLabel(currentUser.role).toLowerCase() && (
+                  <div className="text-xs font-semibold text-slate-800">{currentUser.name}</div>
+                )}
+                <span
+                  className={`inline-block rounded-full px-1.5 py-px text-[10px] font-semibold ${
+                    isAdmin ? 'bg-[#1E2B4D]/10 text-[#1E2B4D]' : 'bg-[#128041]/10 text-[#0E6A35]'
+                  }`}
+                >
+                  {roleLabel(currentUser.role)}
+                </span>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={onChangePassword}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title="Change your password"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">{'Password'}</span>
+            </button>
 
             <button
               type="button"
@@ -407,16 +458,37 @@ export const LayoutShell: React.FC<LayoutShellProps> = ({
               title="Sign Out"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span className="hidden sm:inline">{'Sign Out'}</span>
             </button>
           </div>
         </header>
 
         {/* Page Viewport */}
-        <main className="flex-1 p-4 sm:p-6 max-w-[1440px] w-full mx-auto">{children}</main>
+        {backupDue && (
+          <div role="status" className="no-print border-b border-[#E9C98F] bg-[#FDF6E7] px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[15px] text-[#6B4106]">
+              <strong className="font-semibold">{'No backup taken today.'}</strong>{' '}
+              {lastBackupAt
+                ? `${'Last backup:'} ${new Date(lastBackupAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}.`
+                : 'This PC has never been backed up.'}{' '}
+              {'If this computer fails, data since then is lost.'}
+            </p>
+            <button
+              type="button"
+              onClick={onBackupNow}
+              className="inline-flex items-center gap-2 rounded-md bg-[#C8740A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#A85F06] transition-colors cursor-pointer"
+            >
+              <HardDriveDownload className="w-4 h-4" />
+              <span>{folderConnected ? 'Save backup to folder' : 'Download backup'}</span>
+            </button>
+          </div>
+        )}
 
-        <footer className="no-print border-t border-slate-200 bg-white px-6 py-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1440px] w-full mx-auto">{children}</main>
+
+        <footer className="no-print border-t border-[#DCE1DA] px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
           <span>{settings.centerName}</span>
+          <PoweredBy />
           <span>
             Local Storage Active
             {settings.lastSyncedAt
