@@ -1,0 +1,417 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Mukta", ui-sans-serif, system-ui, sans-serif;
+  /* No monospace: figures use the body face with aligned (tabular) digits */
+  --font-mono: "Mukta", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #F8FAFC;
+    color: #0F172A;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   ADAPTIVE PRINT ENGINE — AUTO-DETECT POS (<= 100mm) vs A4/A5 (> 100mm)
+   ============================================================================ */
+
+/* Hide dedicated print portal on screen */
+#sigma-print-portal {
+  display: none;
+}
+
+@media print {
+  /* Hide the entire application shell during printing */
+  .no-print,
+  #sigma-app-shell {
+    display: none !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #sigma-print-portal {
+    display: block !important;
+    width: 100% !important;
+    background: #FFFFFF !important;
+  }
+
+  /* Default: hide both until mode/media selects one */
+  #sigma-print-portal .print-layout-pos,
+  #sigma-print-portal .print-layout-a4 {
+    display: none;
+  }
+
+  /* Forced POS Thermal Mode */
+  #sigma-print-portal[data-print-mode="pos"] .print-layout-pos {
+    display: block !important;
+    width: 76mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+
+  /* Forced A4 Clinic Bill Mode */
+  #sigma-print-portal[data-print-mode="a4"] .print-layout-a4 {
+    display: block !important;
+    width: 100% !important;
+  }
+  /* Auto-Detect default: Formal A4 layout on standard printers */
+  #sigma-print-portal[data-print-mode="auto"] .print-layout-a4 {
+    display: block !important;
+    width: 100% !important;
+    padding: 8mm 10mm !important;
+  }
+  #sigma-print-portal[data-print-mode="auto"] .print-layout-pos {
+    display: none !important;
+  }
+}
+
+/* SMART AUTO-DETECT MODE: Automatically switches to compact 80mm thermal slip on POS printers (<= 110mm) */
+@media print and (max-width: 110mm) {
+  #sigma-print-portal[data-print-mode="auto"] .print-layout-pos {
+    display: block !important;
+    width: 100% !important;
+    padding: 2mm !important;
+  }
+  #sigma-print-portal[data-print-mode="auto"] .print-layout-a4 {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   SIGMA SCREEN STYLE (screen only — print layouts are untouched)
+   Paper, navy ink and emblem green; quiet surfaces, one bold element (the till slip).
+   ============================================================================ */
+:root {
+  --paper: #F2F4F0;
+  --ink: #1E2B4D;
+  --emblem: #128041;
+  --amber: #C8740A;
+  --stamp: #B42318;
+  --rule: #DCE1DA;
+}
+
+@media screen {
+  body {
+    background-color: var(--paper);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Mukta has a small x-height: lift the smallest sizes so they stay readable at the desk */
+  #sigma-app-shell .text-xs { font-size: 13px; line-height: 1.45; }
+  #sigma-app-shell .text-\[11px\] { font-size: 12px; }
+  #sigma-app-shell .text-\[10px\] { font-size: 11px; }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* Panels: hairline rule, no floating shadows */
+  #sigma-app-shell main .rounded-xl.border.bg-white,
+  #sigma-app-shell main .rounded-2xl.border.bg-white {
+    border-color: var(--rule);
+    box-shadow: none;
+    border-radius: 12px;
+  }
+
+  /* Tables: sentence-case headers on a faint paper tint */
+  #sigma-app-shell main thead tr {
+    background: #F7F8F5;
+  }
+  #sigma-app-shell main thead th {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #5B6573;
+  }
+  #sigma-app-shell main tbody tr:hover {
+    background-color: #F5F7F2;
+  }
+
+  /* Fields */
+  #sigma-app-shell main input:not([type="checkbox"]):not([type="radio"]),
+  #sigma-app-shell main select,
+  #sigma-app-shell main textarea {
+    border-radius: 8px;
+    border-color: #CBD2C9;
+  }
+  :focus-visible {
+    outline: 2px solid var(--emblem);
+    outline-offset: 2px;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--ink) !important;
+    box-shadow: 0 0 0 3px rgb(30 43 77 / 0.12);
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #C3CAC0; border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  aside ::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.18); }
+}
+
+/* ---- The till slip (dashboard) ---- */
+.till-slip {
+  position: relative;
+  background: #FFFFFF;
+  color: #1F2937;
+  padding: 22px 22px 34px;
+  /* torn bottom edge */
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+          mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+  filter: drop-shadow(0 1px 0 var(--rule));
+}
+.till-slip::before {
+  /* thermal-paper feed holes feel: a faint top rule */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--ink);
+}
+.till-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  font-variant-numeric: tabular-nums;
+}
+.till-row .leader {
+  flex: 1;
+  border-bottom: 1.5px dotted #B8C0B5;
+  transform: translateY(-4px);
+}
+.till-cut {
+  border-top: 1.5px dashed #B8C0B5;
+  margin: 10px 0;
+}
+.till-print {
+  animation: tillPrint 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes tillPrint {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .till-print { animation: none; }
+}
+
+/* ============================================================================
+   NIGHT MODE (screen only — printing always uses white paper)
+   Same identity after dark: navy surfaces, emblem green, amber and stamp red
+   lifted so they stay readable.
+   ============================================================================ */
+@media screen {
+  html.dark {
+    --d-bg: #131B2E;
+    --d-surface: #1A2438;
+    --d-raised: #212C44;
+    --d-hover: #26324D;
+    --d-rule: #2E3B57;
+    --d-text: #E7EBF3;
+    --d-text2: #C3CBDA;
+    --d-muted: #95A1B8;
+    --d-navy: #AFC3F0;
+    --d-green: #5FD893;
+    --d-amber: #F0B460;
+    --d-red: #F38B82;
+    --d-blue: #A9C2F5;
+    color-scheme: dark;
+  }
+  html.dark body,
+  html.dark .bg-\[\#F2F4F0\] { background-color: var(--d-bg); color: var(--d-text); }
+
+  /* Surfaces */
+  html.dark .bg-white { background-color: var(--d-surface); }
+  html.dark .bg-slate-50, html.dark .bg-slate-50\/80, html.dark .bg-slate-50\/50 { background-color: var(--d-raised); }
+  html.dark .bg-slate-100, html.dark .bg-slate-200\/80 { background-color: var(--d-hover); }
+  html.dark .hover\:bg-slate-50:hover, html.dark .hover\:bg-slate-50\/80:hover,
+  html.dark .hover\:bg-slate-100:hover, html.dark .hover\:bg-slate-200:hover,
+  html.dark .hover\:bg-white:hover, html.dark .hover\:bg-\[\#F5F7F2\]:hover,
+  html.dark .hover\:bg-blue-50\/60:hover, html.dark .hover\:bg-\[\#1E2B4D\]\/5:hover { background-color: var(--d-hover); }
+
+  /* Text */
+  html.dark .text-slate-900, html.dark .text-slate-800, html.dark .text-black,
+  html.dark .hover\:text-slate-900:hover, html.dark .hover\:text-slate-800:hover { color: var(--d-text); }
+  html.dark .text-slate-700, html.dark .text-slate-600,
+  html.dark .hover\:text-slate-700:hover, html.dark .hover\:text-slate-600:hover { color: var(--d-text2); }
+  html.dark .text-slate-500, html.dark .text-slate-400 { color: var(--d-muted); }
+  html.dark .text-\[\#1E2B4D\] { color: var(--d-navy); }
+
+  /* Rules */
+  html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300,
+  html.dark .border-slate-400, html.dark .border-\[\#DCE1DA\], html.dark .border-\[\#CBD2C9\],
+  html.dark .border-black { border-color: var(--d-rule); }
+  html.dark .divide-slate-100 > :not(:last-child), html.dark .divide-slate-200 > :not(:last-child),
+  html.dark .divide-\[\#DCE1DA\] > :not(:last-child) { border-color: var(--d-rule); }
+  html.dark .border-\[\#1E2B4D\], html.dark .border-\[\#1E2B4D\]\/25, html.dark .border-\[\#1E2B4D\]\/30 { border-color: #4A5F8F; }
+
+  /* Navy buttons get lighter so they do not sink into the background */
+  html.dark .bg-\[\#1E2B4D\] { background-color: #3A5490; }
+  html.dark .hover\:bg-\[\#142036\]:hover { background-color: #2F477D; }
+  html.dark .bg-\[\#1E2B4D\]\/10 { background-color: rgb(175 195 240 / 0.14); }
+  /* …except the brand panels (sidebar, login), which go deeper */
+  html.dark .brand-panel { background-color: #0E1524; }
+
+  /* Green (paid, done) */
+  html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-800,
+  html.dark .text-emerald-900, html.dark .text-\[\#0E6A35\], html.dark .text-\[\#128041\] { color: var(--d-green); }
+  html.dark .bg-emerald-50, html.dark .bg-\[\#EEF7F1\], html.dark .bg-\[\#128041\]\/10 { background-color: rgb(61 208 122 / 0.12); }
+  html.dark .hover\:bg-emerald-100:hover { background-color: rgb(61 208 122 / 0.2); }
+  html.dark .border-emerald-200, html.dark .border-\[\#B9DCC6\] { border-color: rgb(61 208 122 / 0.35); }
+
+  /* Amber (dues, pending, backup reminder) */
+  html.dark .text-amber-600, html.dark .text-amber-700, html.dark .text-amber-900,
+  html.dark .text-\[\#C8740A\], html.dark .text-\[\#6B4106\] { color: var(--d-amber); }
+  html.dark .bg-amber-50, html.dark .bg-\[\#FDF6E7\] { background-color: rgb(232 163 61 / 0.13); }
+  html.dark .hover\:bg-amber-100:hover { background-color: rgb(232 163 61 / 0.2); }
+  html.dark .border-amber-300, html.dark .border-\[\#E9C98F\] { border-color: rgb(232 163 61 / 0.4); }
+
+  /* Red (expenses, delete, errors) */
+  html.dark .text-red-500, html.dark .text-red-600, html.dark .text-red-700,
+  html.dark .text-red-900, html.dark .text-\[\#B42318\], html.dark .hover\:text-red-700:hover { color: var(--d-red); }
+  html.dark .bg-red-50, html.dark .hover\:bg-red-50:hover { background-color: rgb(243 110 98 / 0.12); }
+  html.dark .hover\:bg-red-100:hover { background-color: rgb(243 110 98 / 0.2); }
+  html.dark .border-red-200, html.dark .hover\:border-red-200:hover { border-color: rgb(243 110 98 / 0.4); }
+
+  /* Blue tints */
+  html.dark .bg-blue-50, html.dark .bg-blue-50\/70 { background-color: rgb(96 140 230 / 0.14); }
+  html.dark .hover\:bg-blue-100:hover { background-color: rgb(96 140 230 / 0.22); }
+  html.dark .text-blue-900 { color: var(--d-blue); }
+  html.dark .border-blue-100, html.dark .border-blue-200 { border-color: rgb(96 140 230 / 0.3); }
+
+  /* Panels, tables and fields */
+  html.dark #sigma-app-shell main .rounded-xl.border.bg-white,
+  html.dark #sigma-app-shell main .rounded-2xl.border.bg-white { border-color: var(--d-rule); }
+  html.dark #sigma-app-shell main thead tr { background: var(--d-raised); }
+  html.dark #sigma-app-shell main thead th { color: var(--d-muted); }
+  html.dark #sigma-app-shell main tbody tr:hover { background-color: var(--d-raised); }
+  html.dark input:not([type="checkbox"]):not([type="radio"]),
+  html.dark select,
+  html.dark textarea {
+    background-color: var(--d-raised);
+    color: var(--d-text);
+    border-color: var(--d-rule);
+  }
+  html.dark input::placeholder, html.dark textarea::placeholder { color: #6F7C95; }
+  html.dark input:disabled, html.dark input[readonly] { background-color: var(--d-hover); }
+  html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
+    border-color: var(--d-navy) !important;
+    box-shadow: 0 0 0 3px rgb(175 195 240 / 0.2);
+  }
+  html.dark ::-webkit-scrollbar-thumb { background: #34425F; }
+
+  /* The till slip stays a slip: a dark sheet with green top bar */
+  html.dark .till-slip { background: var(--d-surface); color: var(--d-text); filter: none; }
+  html.dark .till-slip::before { background: #3DD07A; }
+  html.dark .till-row .leader, html.dark .till-cut { border-color: #3A4866; }
+}
+
+/* Receipt previews stay paper-white in night mode, because they show what will print */
+@media screen {
+  html.dark .paper-sheet { color-scheme: light; color: #0F172A; }
+  html.dark .paper-sheet .bg-\[\#128041\]\/10 { background-color: color-mix(in oklab, #128041 10%, transparent); }
+  html.dark .paper-sheet .bg-\[\#1E2B4D\] { background-color: #1E2B4D; }
+  html.dark .paper-sheet .bg-\[\#1E2B4D\]\/10 { background-color: color-mix(in oklab, #1E2B4D 10%, transparent); }
+  html.dark .paper-sheet .bg-\[\#EEF7F1\] { background-color: #EEF7F1; }
+  html.dark .paper-sheet .bg-\[\#F2F4F0\] { background-color: #F2F4F0; }
+  html.dark .paper-sheet .bg-\[\#FDF6E7\] { background-color: #FDF6E7; }
+  html.dark .paper-sheet .bg-amber-50 { background-color: var(--color-amber-50); }
+  html.dark .paper-sheet .bg-blue-50 { background-color: var(--color-blue-50); }
+  html.dark .paper-sheet .bg-blue-50\/70 { background-color: color-mix(in oklab, var(--color-blue-50) 70%, transparent); }
+  html.dark .paper-sheet .bg-emerald-50 { background-color: var(--color-emerald-50); }
+  html.dark .paper-sheet .bg-red-50 { background-color: var(--color-red-50); }
+  html.dark .paper-sheet .bg-slate-100 { background-color: var(--color-slate-100); }
+  html.dark .paper-sheet .bg-slate-200\/80 { background-color: color-mix(in oklab, var(--color-slate-200) 80%, transparent); }
+  html.dark .paper-sheet .bg-slate-50 { background-color: var(--color-slate-50); }
+  html.dark .paper-sheet .bg-slate-50\/50 { background-color: color-mix(in oklab, var(--color-slate-50) 50%, transparent); }
+  html.dark .paper-sheet .bg-slate-50\/80 { background-color: color-mix(in oklab, var(--color-slate-50) 80%, transparent); }
+  html.dark .paper-sheet .bg-white { background-color: var(--color-white); }
+  html.dark .paper-sheet .border-\[\#1E2B4D\] { border-color: #1E2B4D; }
+  html.dark .paper-sheet .border-\[\#1E2B4D\]\/25 { border-color: color-mix(in oklab, #1E2B4D 25%, transparent); }
+  html.dark .paper-sheet .border-\[\#1E2B4D\]\/30 { border-color: color-mix(in oklab, #1E2B4D 30%, transparent); }
+  html.dark .paper-sheet .border-\[\#B9DCC6\] { border-color: #B9DCC6; }
+  html.dark .paper-sheet .border-\[\#CBD2C9\] { border-color: #CBD2C9; }
+  html.dark .paper-sheet .border-\[\#DCE1DA\] { border-color: #DCE1DA; }
+  html.dark .paper-sheet .border-\[\#E9C98F\] { border-color: #E9C98F; }
+  html.dark .paper-sheet .border-amber-300 { border-color: var(--color-amber-300); }
+  html.dark .paper-sheet .border-black { border-color: var(--color-black); }
+  html.dark .paper-sheet .border-blue-100 { border-color: var(--color-blue-100); }
+  html.dark .paper-sheet .border-blue-200 { border-color: var(--color-blue-200); }
+  html.dark .paper-sheet .border-emerald-200 { border-color: var(--color-emerald-200); }
+  html.dark .paper-sheet .border-red-200 { border-color: var(--color-red-200); }
+  html.dark .paper-sheet .border-slate-100 { border-color: var(--color-slate-100); }
+  html.dark .paper-sheet .border-slate-200 { border-color: var(--color-slate-200); }
+  html.dark .paper-sheet .border-slate-300 { border-color: var(--color-slate-300); }
+  html.dark .paper-sheet .border-slate-400 { border-color: var(--color-slate-400); }
+  html.dark .paper-sheet .divide-\[\#DCE1DA\] > :not(:last-child) { border-color: #DCE1DA; }
+  html.dark .paper-sheet .divide-slate-100 > :not(:last-child) { border-color: var(--color-slate-100); }
+  html.dark .paper-sheet .divide-slate-200 > :not(:last-child) { border-color: var(--color-slate-200); }
+  html.dark .paper-sheet .hover\:bg-\[\#142036\]:hover { background-color: #142036; }
+  html.dark .paper-sheet .hover\:bg-\[\#1E2B4D\]\/5:hover { background-color: color-mix(in oklab, #1E2B4D 5%, transparent); }
+  html.dark .paper-sheet .hover\:bg-\[\#F5F7F2\]:hover { background-color: #F5F7F2; }
+  html.dark .paper-sheet .hover\:bg-amber-100:hover { background-color: var(--color-amber-100); }
+  html.dark .paper-sheet .hover\:bg-blue-100:hover { background-color: var(--color-blue-100); }
+  html.dark .paper-sheet .hover\:bg-blue-50\/60:hover { background-color: color-mix(in oklab, var(--color-blue-50) 60%, transparent); }
+  html.dark .paper-sheet .hover\:bg-emerald-100:hover { background-color: var(--color-emerald-100); }
+  html.dark .paper-sheet .hover\:bg-red-100:hover { background-color: var(--color-red-100); }
+  html.dark .paper-sheet .hover\:bg-red-50:hover { background-color: var(--color-red-50); }
+  html.dark .paper-sheet .hover\:bg-slate-100:hover { background-color: var(--color-slate-100); }
+  html.dark .paper-sheet .hover\:bg-slate-200:hover { background-color: var(--color-slate-200); }
+  html.dark .paper-sheet .hover\:bg-slate-50:hover { background-color: var(--color-slate-50); }
+  html.dark .paper-sheet .hover\:bg-slate-50\/80:hover { background-color: color-mix(in oklab, var(--color-slate-50) 80%, transparent); }
+  html.dark .paper-sheet .hover\:bg-white:hover { background-color: var(--color-white); }
+  html.dark .paper-sheet .hover\:border-red-200:hover { border-color: var(--color-red-200); }
+  html.dark .paper-sheet .hover\:text-red-700:hover { color: var(--color-red-700); }
+  html.dark .paper-sheet .hover\:text-slate-600:hover { color: var(--color-slate-600); }
+  html.dark .paper-sheet .hover\:text-slate-700:hover { color: var(--color-slate-700); }
+  html.dark .paper-sheet .hover\:text-slate-800:hover { color: var(--color-slate-800); }
+  html.dark .paper-sheet .hover\:text-slate-900:hover { color: var(--color-slate-900); }
+  html.dark .paper-sheet .text-\[\#0E6A35\] { color: #0E6A35; }
+  html.dark .paper-sheet .text-\[\#128041\] { color: #128041; }
+  html.dark .paper-sheet .text-\[\#1E2B4D\] { color: #1E2B4D; }
+  html.dark .paper-sheet .text-\[\#6B4106\] { color: #6B4106; }
+  html.dark .paper-sheet .text-\[\#B42318\] { color: #B42318; }
+  html.dark .paper-sheet .text-\[\#C8740A\] { color: #C8740A; }
+  html.dark .paper-sheet .text-amber-600 { color: var(--color-amber-600); }
+  html.dark .paper-sheet .text-amber-700 { color: var(--color-amber-700); }
+  html.dark .paper-sheet .text-amber-900 { color: var(--color-amber-900); }
+  html.dark .paper-sheet .text-black { color: var(--color-black); }
+  html.dark .paper-sheet .text-blue-900 { color: var(--color-blue-900); }
+  html.dark .paper-sheet .text-emerald-600 { color: var(--color-emerald-600); }
+  html.dark .paper-sheet .text-emerald-700 { color: var(--color-emerald-700); }
+  html.dark .paper-sheet .text-emerald-800 { color: var(--color-emerald-800); }
+  html.dark .paper-sheet .text-emerald-900 { color: var(--color-emerald-900); }
+  html.dark .paper-sheet .text-red-500 { color: var(--color-red-500); }
+  html.dark .paper-sheet .text-red-600 { color: var(--color-red-600); }
+  html.dark .paper-sheet .text-red-700 { color: var(--color-red-700); }
+  html.dark .paper-sheet .text-red-900 { color: var(--color-red-900); }
+  html.dark .paper-sheet .text-slate-400 { color: var(--color-slate-400); }
+  html.dark .paper-sheet .text-slate-500 { color: var(--color-slate-500); }
+  html.dark .paper-sheet .text-slate-600 { color: var(--color-slate-600); }
+  html.dark .paper-sheet .text-slate-700 { color: var(--color-slate-700); }
+  html.dark .paper-sheet .text-slate-800 { color: var(--color-slate-800); }
+  html.dark .paper-sheet .text-slate-900 { color: var(--color-slate-900); }
+}
